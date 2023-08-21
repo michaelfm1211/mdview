@@ -50,75 +50,43 @@ static int bufcat(struct mdview_buf *buf, char *str, size_t str_len) {
  * DECORATION AND TAGS
  */
 
+#define TOGGLE_DECORATION(bit, tag)                                            \
+  if (ctx->text_decoration & (1 << bit)) {                                     \
+    if (!bufcat(&ctx->html, "</" tag ">", 3 + sizeof(tag) - 1))                \
+      return 0;                                                                \
+  } else {                                                                     \
+    if (!bufcat(&ctx->html, "<" tag ">", 2 + sizeof(tag) - 1))                 \
+      return 0;                                                                \
+  }                                                                            \
+  ctx->text_decoration ^= (1 << bit);
+
 static int toggle_italics(struct mdview_ctx *ctx) {
-  if (ctx->text_decoration & 1) {
-    if (!bufcat(&ctx->html, "</i>", 4))
-      return 0;
-  } else {
-    if (!bufcat(&ctx->html, "<i>", 3))
-      return 0;
-  }
-  ctx->text_decoration ^= 1;
+  TOGGLE_DECORATION(0, "i")
   return 1;
 }
 
 static int toggle_bold(struct mdview_ctx *ctx) {
-  if (ctx->text_decoration & 2) {
-    if (!bufcat(&ctx->html, "</b>", 4))
-      return 0;
-  } else {
-    if (!bufcat(&ctx->html, "<b>", 3))
-      return 0;
-  }
-  ctx->text_decoration ^= 2;
+  TOGGLE_DECORATION(1, "b")
   return 1;
 }
 
 static int toggle_inline_code(struct mdview_ctx *ctx) {
-  if (ctx->text_decoration & 16) {
-    if (!bufcat(&ctx->html, "</code>", 7))
-      return 0;
-  } else {
-    if (!bufcat(&ctx->html, "<code>", 6))
-      return 0;
-  }
-  ctx->text_decoration ^= 16;
+  TOGGLE_DECORATION(4, "code")
   return 1;
 }
 
 static int toggle_sup(struct mdview_ctx *ctx) {
-  if (ctx->text_decoration & 32) {
-    if (!bufcat(&ctx->html, "</sup>", 6))
-      return 0;
-  } else {
-    if (!bufcat(&ctx->html, "<sup>", 5))
-      return 0;
-  }
-  ctx->text_decoration ^= 32;
+  TOGGLE_DECORATION(5, "sup")
   return 1;
 }
 
 static int toggle_sub(struct mdview_ctx *ctx) {
-  if (ctx->text_decoration & 8) {
-    if (!bufcat(&ctx->html, "</sub>", 6))
-      return 0;
-  } else {
-    if (!bufcat(&ctx->html, "<sub>", 5))
-      return 0;
-  }
-  ctx->text_decoration ^= 8;
+  TOGGLE_DECORATION(3, "sub")
   return 1;
 }
 
 static int toggle_strike(struct mdview_ctx *ctx) {
-  if (ctx->text_decoration & 4) {
-    if (!bufcat(&ctx->html, "</s>", 4))
-      return 0;
-  } else {
-    if (!bufcat(&ctx->html, "<s>", 3))
-      return 0;
-  }
-  ctx->text_decoration ^= 4;
+  TOGGLE_DECORATION(2, "s")
   return 1;
 }
 
