@@ -58,38 +58,20 @@ static int bufcat(struct mdview_buf *buf, char *str, size_t str_len) {
     if (!bufcat(&ctx->html, "<" tag ">", 2 + sizeof(tag) - 1))                 \
       return 0;                                                                \
   }                                                                            \
-  ctx->text_decoration ^= (1 << bit);
-
-static int toggle_italics(struct mdview_ctx *ctx) {
-  TOGGLE_DECORATION(0, "i")
+  ctx->text_decoration ^= (1 << bit);                                          \
   return 1;
-}
 
-static int toggle_bold(struct mdview_ctx *ctx) {
-  TOGGLE_DECORATION(1, "b")
-  return 1;
-}
-
+// Toggle the decoration bit and add the appropriate tag to the buffer.
+static int toggle_italics(struct mdview_ctx *ctx) { TOGGLE_DECORATION(0, "i") }
+static int toggle_bold(struct mdview_ctx *ctx) { TOGGLE_DECORATION(1, "b") }
 static int toggle_inline_code(struct mdview_ctx *ctx) {
   TOGGLE_DECORATION(4, "code")
-  return 1;
 }
+static int toggle_sup(struct mdview_ctx *ctx) { TOGGLE_DECORATION(5, "sup") }
+static int toggle_sub(struct mdview_ctx *ctx) { TOGGLE_DECORATION(3, "sub") }
+static int toggle_strike(struct mdview_ctx *ctx) { TOGGLE_DECORATION(2, "s") }
 
-static int toggle_sup(struct mdview_ctx *ctx) {
-  TOGGLE_DECORATION(5, "sup")
-  return 1;
-}
-
-static int toggle_sub(struct mdview_ctx *ctx) {
-  TOGGLE_DECORATION(3, "sub")
-  return 1;
-}
-
-static int toggle_strike(struct mdview_ctx *ctx) {
-  TOGGLE_DECORATION(2, "s")
-  return 1;
-}
-
+// Change the block type and add the appropriate tag to the buffer.
 static int toggle_code_block(struct mdview_ctx *ctx) {
   if (ctx->block_type == 8) {
     ctx->block_type = 0;
@@ -102,7 +84,6 @@ static int toggle_code_block(struct mdview_ctx *ctx) {
   }
   return 1;
 }
-
 static int list_item(struct mdview_ctx *ctx) {
   if (!bufcat(&ctx->html, "<li>", 4))
     return 0;
@@ -110,7 +91,6 @@ static int list_item(struct mdview_ctx *ctx) {
   ctx->block_type = 7;
   return 1;
 }
-
 static int header(struct mdview_ctx *ctx, int level) {
   char open_tag[4] = {'<', 'h', '0' + level, '>'};
   if (!bufcat(&ctx->html, open_tag, 4))
