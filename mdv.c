@@ -13,8 +13,9 @@ void write_html(struct mdview_ctx *ctx, char *html) {
       perror("memory error");
     } else {
       fprintf(stderr, "parsing error: %s\n", ctx->error_msg);
-      exit(EXIT_FAILURE);
     }
+    mdview_free(ctx);
+    exit(EXIT_FAILURE);
   }
 }
 
