@@ -1,18 +1,31 @@
 CFLAGS := -Wall -Wextra -Werror -std=c99 -pedantic
 
+SRCS := $(wildcard lib/*.c)
+OBJS := $(SRCS:.c=.o)
+
 all: CFLAGS += -O2
 all: libmdview.a mdv
+	mkdir -p out
+	mv libmdview.a out
+	mv mdv out
+	cp lib/mdview.h out
 
 debug: CFLAGS += -g -O0 -fsanitize=address -fsanitize=undefined
 debug: libmdview.a mdv
+	mkdir -p out
+	mv libmdview.a out
+	mv mdv out
+	cp lib/mdview.h out
 
-libmdview.a: mdview.c mdview.h
-	$(CC) $(CFLAGS) -c -o mdview.o mdview.c
-	$(AR) rcs libmdview.a mdview.o
+%.o: %.c
+	$(CC) $(CFLAGS) -fvisibility=hidden -c -o $@ $<
+
+libmdview.a: $(OBJS)
+	$(AR) rcs libmdview.a $(OBJS)
 
 mdv: libmdview.a mdv.c
 	$(CC) $(CFLAGS) -L. -lmdview -o mdv mdv.c
 
 .PHONY: clean
 clean:
-	rm -f *.o *.a mdv
+	rm -rf $(OBJS) *.dSYM out/

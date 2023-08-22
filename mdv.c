@@ -1,4 +1,4 @@
-#include "mdview.h"
+#include "lib/mdview.h"
 #include <stdio.h>
 #include <stdlib.h>
 
