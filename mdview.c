@@ -46,8 +46,13 @@ static int bufcat(struct mdview_buf *buf, char *str, size_t str_len) {
   return 1;
 }
 
+static void bufclear(struct mdview_buf *buf) {
+  buf->len = 0;
+  buf->buf[0] = '\0';
+}
+
 /*
- * DECORATION AND TAGS
+ * DECORATIONS
  */
 
 #define TOGGLE_DECORATION(bit, tag)                                            \
@@ -62,40 +67,107 @@ static int bufcat(struct mdview_buf *buf, char *str, size_t str_len) {
   return 1;
 
 // Toggle the decoration bit and add the appropriate tag to the buffer.
+
 static int toggle_italics(struct mdview_ctx *ctx) { TOGGLE_DECORATION(0, "i") }
 static int toggle_bold(struct mdview_ctx *ctx) { TOGGLE_DECORATION(1, "b") }
+static int toggle_strike(struct mdview_ctx *ctx) { TOGGLE_DECORATION(2, "s") }
+static int toggle_sub(struct mdview_ctx *ctx) { TOGGLE_DECORATION(3, "sub") }
 static int toggle_inline_code(struct mdview_ctx *ctx) {
   TOGGLE_DECORATION(4, "code")
 }
 static int toggle_sup(struct mdview_ctx *ctx) { TOGGLE_DECORATION(5, "sup") }
-static int toggle_sub(struct mdview_ctx *ctx) { TOGGLE_DECORATION(3, "sub") }
-static int toggle_strike(struct mdview_ctx *ctx) { TOGGLE_DECORATION(2, "s") }
 
-// Change the block type and add the appropriate tag to the buffer.
-static int toggle_code_block(struct mdview_ctx *ctx) {
-  if (ctx->block_type == 8) {
-    ctx->block_type = 0;
-    if (!bufcat(&ctx->html, "</code></pre>", 13))
+// this is called by mdview_flush()
+static int end_all_decorations(struct mdview_ctx *ctx) {
+  if (ctx->text_decoration & (1 << 0)) {
+    if (!toggle_italics(ctx))
       return 0;
-  } else {
-    ctx->block_type = 8;
-    if (!bufcat(&ctx->html, "<pre><code>", 11))
+  }
+  if (ctx->text_decoration & (1 << 1)) {
+    if (!toggle_bold(ctx))
+      return 0;
+  }
+  if (ctx->text_decoration & (1 << 2)) {
+    if (!toggle_strike(ctx))
+      return 0;
+  }
+  if (ctx->text_decoration & (1 << 3)) {
+    if (!toggle_sub(ctx))
+      return 0;
+  }
+  if (ctx->text_decoration & (1 << 4)) {
+    if (!toggle_inline_code(ctx))
+      return 0;
+  }
+  if (ctx->text_decoration & (1 << 5)) {
+    if (!toggle_sub(ctx))
       return 0;
   }
   return 1;
 }
-static int list_item(struct mdview_ctx *ctx) {
-  if (!bufcat(&ctx->html, "<li>", 4))
+
+/*
+ * BLOCKS
+ */
+
+static int close_block(struct mdview_ctx *ctx) {
+  // create this in advance, just in case we need it
+  char header_tag[5] = {'<', '/', 'h', '0' + ctx->block_type, '>'};
+
+  switch (ctx->block_type) {
+  case 0:
+    return bufcat(&ctx->html, "</p>", 4);
+  case 1:
+  case 2:
+  case 3:
+  case 4:
+  case 5:
+  case 6:
+    return bufcat(&ctx->html, header_tag, 5);
+  case 7:
+    return bufcat(&ctx->html, "</ul>", 5);
+  case 8:
+    return bufcat(&ctx->html, "</ol>", 5);
+  case 9:
+    return bufcat(&ctx->html, "</code></pre>", 13);
+  case 10:
+    return bufcat(&ctx->html, "</blockquote>", 13);
+  default:
+    fprintf(stderr, "Undefined newline behavior for block type %d\n",
+            ctx->block_type);
     return 0;
-  ctx->list_type = 1;
-  ctx->block_type = 7;
+  }
   return 1;
 }
-static int header(struct mdview_ctx *ctx, int level) {
-  char open_tag[4] = {'<', 'h', '0' + level, '>'};
-  if (!bufcat(&ctx->html, open_tag, 4))
-    return 0;
+
+#define BLOCK_TAG(type, tag)                                                   \
+  close_block(ctx);                                                            \
+  ctx->block_type = type;                                                      \
+  return bufcat(&ctx->html, "<" tag ">", 2 + sizeof(tag) - 1);
+
+static int block_paragraph(struct mdview_ctx *ctx) { BLOCK_TAG(0, "p") }
+static int block_unordered_list(struct mdview_ctx *ctx) { BLOCK_TAG(7, "ul") }
+// TODO: ordered list
+// static int block_ordered_list(struct mdview_ctx *ctx) { BLOCK_TAG(8, "ol")
+// }
+static int block_code(struct mdview_ctx *ctx) { BLOCK_TAG(9, "pre><code") }
+static int block_quote(struct mdview_ctx *ctx) { BLOCK_TAG(10, "blockquote") }
+static int block_header(struct mdview_ctx *ctx, int level) {
+  close_block(ctx);
   ctx->block_type = level;
+  char open_tag[4] = {'<', 'h', '0' + level, '>'};
+  return bufcat(&ctx->html, open_tag, 4);
+}
+
+static int unordered_list_item(struct mdview_ctx *ctx) {
+  // if we're not in an unordered list, start one
+  if (ctx->block_type != 7) {
+    if (!block_unordered_list(ctx))
+      return 0;
+  }
+
+  if (!bufcat(&ctx->html, "<li>", 4))
+    return 0;
   return 1;
 }
 
@@ -106,59 +178,51 @@ static int header(struct mdview_ctx *ctx, int level) {
 // Handle a newline character and update figure out which block elements need
 // to be created/closed.
 static int handle_newline(struct mdview_ctx *ctx) {
-  if (ctx->line_start && ctx->block_type != 8) {
-    // two consequetive newlines, end the current block
-    switch (ctx->block_type) {
-    case 0:
-      if (!bufcat(&ctx->html, "</p><p>", 7))
-        return 0;
-      break;
-    case 7:
-      if (!bufcat(&ctx->html, "</li><p>", 8))
-        return 0;
-      ctx->list_type = 0;
-      break;
-    }
-    ctx->block_type = 0;
+  if (ctx->line_start && ctx->block_type != 9) {
+    // if there has been two consequetive newlines, then close the current
+    // block.
+    block_paragraph(ctx);
   } else {
     ctx->line_start = 1;
+    ctx->indent = 0;
   }
 
-  // if there's a header block, end it at the new line (no multi-line headers)
-  if (ctx->block_type >= 1 && ctx->block_type <= 6) {
-    if (!bufcat(&ctx->html, "</h", 3))
-      return 0;
-    if (!bufadd(&ctx->html, '0' + ctx->block_type))
-      return 0;
-    if (!bufcat(&ctx->html, "><p>", 4))
-      return 0;
-    ctx->block_type = 0;
-  }
-
-  // if there's a code block, then we want to print a newline character.
-  // otherwise, add a space character between words.
-  if (ctx->block_type == 8) {
-    if (!bufadd(&ctx->html, '\n'))
-      return 0;
-  } else {
-    if (!bufadd(&ctx->html, ' '))
-      return 0;
+  // different newline behavior depending on block
+  switch (ctx->block_type) {
+  case 0:  // paragraph
+  case 7:  // unordered list
+  case 8:  // ordered list
+  case 10: // blockquote
+    return bufadd(&ctx->html, ' ');
+  case 1: // headers
+  case 2:
+  case 3:
+  case 4:
+  case 5:
+  case 6:
+    return block_paragraph(ctx);
+  case 9:
+    return bufadd(&ctx->html, '\n');
+  default:
+    fprintf(stderr, "Undefined newline behavior for block type %d\n",
+            ctx->block_type);
+    return 0;
   }
 
   return 1;
 }
 
 // End a special sequence. If it is valid, then write the HTML to the buffer.
-// If it is invalid, then write the special characters to the buffer as regular
-// characters. Returns 0 on error, 1 on success but no result because the
-// sequence was invalid, and 2 on success with a valid sequence.
-// NOTE: all special characters must be added in handle_char() too.
+// If it is invalid, then write the special characters to the buffer as
+// regular characters. Returns 0 on error, 1 on success but no result because
+// the sequence was invalid, and 2 on success with a valid sequence. NOTE: all
+// special characters must be added in handle_char() too.
 static int end_special_sequence(struct mdview_ctx *ctx, char curr_ch) {
   // try to match to a valid special sequence
   switch (ctx->special_type) {
   case '*':
     if (ctx->special_cnt == 1 && ctx->line_start && curr_ch == ' ') {
-      if (!list_item(ctx))
+      if (!unordered_list_item(ctx))
         return 0;
       goto end;
     } else if (ctx->special_cnt == 1) {
@@ -179,7 +243,7 @@ static int end_special_sequence(struct mdview_ctx *ctx, char curr_ch) {
     break;
   case '-':
     if (ctx->special_cnt == 1 && ctx->line_start && curr_ch == ' ') {
-      if (!list_item(ctx))
+      if (!unordered_list_item(ctx))
         return 1;
       goto end;
     } else if (ctx->special_cnt == 3 && ctx->line_start && curr_ch == '\n') {
@@ -190,7 +254,7 @@ static int end_special_sequence(struct mdview_ctx *ctx, char curr_ch) {
     break;
   case '#':
     if (ctx->special_cnt >= 1 && ctx->special_cnt <= 6 && curr_ch == ' ') {
-      if (!header(ctx, ctx->special_cnt))
+      if (!block_header(ctx, ctx->special_cnt))
         return 0;
       goto end;
     }
@@ -201,8 +265,13 @@ static int end_special_sequence(struct mdview_ctx *ctx, char curr_ch) {
         return 0;
       goto end;
     } else if (ctx->special_cnt == 3 && ctx->line_start) {
-      if (!toggle_code_block(ctx))
-        return 0;
+      if (ctx->block_type == 9) {
+        // end block code
+        block_paragraph(ctx);
+      } else {
+        if (!block_code(ctx))
+          return 0;
+      }
       goto end;
     }
     break;
@@ -220,6 +289,13 @@ static int end_special_sequence(struct mdview_ctx *ctx, char curr_ch) {
       goto end;
     } else if (ctx->special_cnt == 2) {
       if (!toggle_strike(ctx))
+        return 0;
+      goto end;
+    }
+    break;
+  case '>':
+    if (ctx->special_cnt == 1 && ctx->line_start && curr_ch == ' ') {
+      if (!block_quote(ctx))
         return 0;
       goto end;
     }
@@ -276,9 +352,9 @@ static int handle_char(struct mdview_ctx *ctx, char ch) {
   // Otherwise, handle all unescaped special characters.
   int is_code;
 start:
-  is_code = ctx->block_type == 8 || ctx->text_decoration & 16;
+  is_code = ctx->block_type == 9 || ctx->text_decoration & 16;
   if ((is_code && ch == '`') ||
-      (!is_code && !ctx->escaped && strchr("*-#`^~", ch))) {
+      (!is_code && !ctx->escaped && strchr("*-#`^~>", ch))) {
     int success = count_special_char(ctx, ch);
     if (!success) {
       return 0;
@@ -287,8 +363,9 @@ start:
       return 1;
     } else if (success == 2) {
       // success, but we had to end a special sequence, so uncount the current
-      // character as a special character and restart handle_char() because the
-      // current char might now be considered escaped (ie: in a code block).
+      // character as a special character and restart handle_char() because
+      // the current char might now be considered escaped (ie: in a code
+      // block).
       ctx->escaped = 0;
       ctx->special_cnt = 0;
       goto start;
@@ -300,7 +377,7 @@ start:
   if (!end_special_sequence(ctx, ch))
     return 0;
   // re-check if we're in a code block; we might have just entered one.
-  is_code = ctx->block_type == 8 || ctx->text_decoration & 16;
+  is_code = ctx->block_type == 9 || ctx->text_decoration & 16;
 
   // handle escaped characters
   if (ctx->escaped || is_code) {
@@ -345,9 +422,9 @@ int mdview_init(struct mdview_ctx *ctx) {
 
   // setup decorations state
   ctx->block_type = 0;
+  ctx->indent = 0;
   ctx->escaped = 0;
   ctx->pending_link = 0;
-  ctx->list_type = 0;
   ctx->text_decoration = 0;
 
   // start with a paragraph
@@ -359,8 +436,7 @@ int mdview_init(struct mdview_ctx *ctx) {
 char *mdview_feed(struct mdview_ctx *ctx, const char *md) {
   // reset the HTML buffer from the last feed, if this is not the first feed
   if (ctx->feeds > 0) {
-    ctx->html.buf[0] = '\0';
-    ctx->html.len = 0;
+    bufclear(&ctx->html);
     ctx->error_msg = NULL;
   }
   ctx->feeds++;
@@ -376,8 +452,24 @@ char *mdview_feed(struct mdview_ctx *ctx, const char *md) {
 }
 
 char *mdview_flush(struct mdview_ctx *ctx) {
-  ctx->error_msg = NULL;
-  return "";
+  if (ctx->feeds > 0) {
+    bufclear(&ctx->html);
+    ctx->error_msg = NULL;
+  }
+
+  // end any pending special sequences
+  if (!end_special_sequence(ctx, 0))
+    return NULL;
+
+  // end all decorations
+  if (!end_all_decorations(ctx))
+    return NULL;
+
+  // end the last block
+  if (!close_block(ctx))
+    return NULL;
+
+  return ctx->html.buf;
 }
 
 void mdview_free(struct mdview_ctx *ctx) {

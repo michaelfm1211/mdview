@@ -16,18 +16,18 @@ struct mdview_ctx {
   struct mdview_buf html;
 
   // Parser state
-  int feeds; // number of times mdview_feed has been called
+  int feeds;       // number of times mdview_feed has been called
   int special_cnt; // Count consequetive special characters (#s, *s, `s, etc.).
   char special_type; // what type of special character is being counted. NULL is
                      // none, anythign else is the character being counted.
-  int line_start; // 0 = not beginng of line, 1 = beginning of line
-  int indent; // number of indents at the beginning of this line
+  int line_start;    // 0 = not beginng of line, 1 = beginning of line
+  int indent;        // number of indents at the beginning of this line
 
-  // Decorations state
-  int block_type; // 0 = text, 1-6 = heading, 7 = list item, 8 = code block
-  int escaped; // 0 = no, 1 = yes
-  int pending_link; // 0 = no, 1 = yes
-  int list_type; // 0 = none, 1 = unordered, 2 = ordered
+  // Decorations/block state
+  unsigned int block_type; // 0 = text, 1-6 = heading, 7 = unordered list, 8 =
+                           // ordered list, 9 = code block, 10 = blockquote
+  int escaped;                  // 0 = no, 1 = yes
+  int pending_link;             // 0 = no, 1 = yes
   unsigned int text_decoration; // bit field: 1 = italics, 2 = bold, 4 = strike,
                                 // 8 = subscript, 16 = inline code,
                                 // 32 = superscript
