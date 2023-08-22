@@ -15,4 +15,4 @@ mdv: libmdview.a mdv.c
 
 .PHONY: clean
 clean:
-	rm -f *.o *.a mdview
+	rm -f *.o *.a mdv
