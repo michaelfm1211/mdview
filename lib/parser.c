@@ -89,6 +89,8 @@ int end_special_sequence(struct mdview_ctx *ctx, char curr_ch) {
         return 0;
       goto end;
     } else if (ctx->special_cnt == 3) {
+      // WARNING: this might close tags out of order, making slightly invalid
+      // HTML, but the browser is able to handle it.
       if (!toggle_italics(ctx))
         return 0;
       if (!toggle_bold(ctx))
@@ -158,9 +160,8 @@ int end_special_sequence(struct mdview_ctx *ctx, char curr_ch) {
   }
 
   // if not matched, then write the special characters as regular characters
-  for (int i = 0; i < ctx->special_cnt; i++) {
-    if (!bufadd(&ctx->html, ctx->special_type))
-      return 0;
+  for (; ctx->special_cnt > 0; ctx->special_cnt--) {
+    handle_regular_char(ctx, ctx->special_type);
   }
   ctx->special_cnt = 0;
   ctx->special_type = 0;

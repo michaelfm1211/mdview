@@ -59,6 +59,8 @@ int end_all_decorations(struct mdview_ctx *ctx) {
  * Blocks
  */
 
+// WARNING: this function might close tags out of order, making slightly invalid
+// HTML, but the browser is able to handle it.
 int close_block(struct mdview_ctx *ctx) {
   // create this in advance, just in case we need it
   char header_tag[5] = {'<', '/', 'h', '0' + ctx->block_type, '>'};
