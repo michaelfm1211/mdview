@@ -23,6 +23,7 @@ int __attribute__((visibility("default"))) mdview_init(struct mdview_ctx *ctx) {
 
   // setup decorations state
   ctx->block_type = 0;
+  ctx->block_subtype = 0;
   ctx->indent = 0;
   ctx->escaped = 0;
   ctx->pending_link = 0;

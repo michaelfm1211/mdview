@@ -59,8 +59,6 @@ int end_all_decorations(struct mdview_ctx *ctx) {
  * Blocks
  */
 
-// WARNING: this function might close tags out of order, making slightly invalid
-// HTML, but the browser is able to handle it.
 int close_block(struct mdview_ctx *ctx) {
   // create this in advance, just in case we need it
   char header_tag[5] = {'<', '/', 'h', '0' + ctx->block_type, '>'};
@@ -91,29 +89,37 @@ int close_block(struct mdview_ctx *ctx) {
   return 1;
 }
 
-#define BLOCK_TAG(type, tag)                                                   \
+#define BLOCK_TAG(type, subtype, tag)                                          \
   close_block(ctx);                                                            \
   ctx->block_type = type;                                                      \
+  ctx->block_subtype = subtype;                                                \
   return bufcat(&ctx->html, "<" tag ">", 2 + sizeof(tag) - 1);
 
-int block_paragraph(struct mdview_ctx *ctx) { BLOCK_TAG(0, "p") }
-int block_unordered_list(struct mdview_ctx *ctx) { BLOCK_TAG(7, "ul") }
+int block_paragraph(struct mdview_ctx *ctx) { BLOCK_TAG(0, 0, "p") }
+int block_unordered_list(struct mdview_ctx *ctx, char starter) {
+  unsigned int subtype = (ctx->indent << 8 | starter);
+  BLOCK_TAG(7, subtype, "ul")
+}
 // TODO: ordered list
-// static int block_ordered_list(struct mdview_ctx *ctx) { BLOCK_TAG(8, "ol")
+// int block_ordered_list(struct mdview_ctx *ctx) { BLOCK_TAG(8, 0, "ol")
 // }
-int block_code(struct mdview_ctx *ctx) { BLOCK_TAG(9, "pre><code") }
-int block_quote(struct mdview_ctx *ctx) { BLOCK_TAG(10, "blockquote") }
+int block_code(struct mdview_ctx *ctx, unsigned int fence_len) {
+  BLOCK_TAG(9, fence_len, "pre><code")
+}
+int block_quote(struct mdview_ctx *ctx) { BLOCK_TAG(10, 0, "blockquote") }
 int block_header(struct mdview_ctx *ctx, int level) {
   close_block(ctx);
   ctx->block_type = level;
+  ctx->block_subtype = 0;
   char open_tag[4] = {'<', 'h', '0' + level, '>'};
   return bufcat(&ctx->html, open_tag, 4);
 }
 
-int unordered_list_item(struct mdview_ctx *ctx) {
-  if (ctx->block_type != 7) {
-    // if we're not in an unordered list, start one
-    if (!block_unordered_list(ctx))
+int unordered_list_item(struct mdview_ctx *ctx, char starter) {
+  if (ctx->block_type != 7 || (ctx->block_subtype & 0xFF) != starter) {
+    // if we're not in an unordered list or the starter is different, start a
+    // new unordered one
+    if (!block_unordered_list(ctx, starter))
       return 0;
   } else {
     // otherwise we need to close the last list item

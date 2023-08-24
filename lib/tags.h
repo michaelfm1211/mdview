@@ -26,11 +26,11 @@ int close_block(struct mdview_ctx *ctx);
 
 // Open a new block (closes the current one with close_block)
 int block_paragraph(struct mdview_ctx *ctx);
-int block_unordered_list(struct mdview_ctx *ctx);
+int block_unordered_list(struct mdview_ctx *ctx, char starter);
 int block_ordered_list(struct mdview_ctx *ctx);
-int block_code(struct mdview_ctx *ctx);
+int block_code(struct mdview_ctx *ctx, unsigned int fence_len);
 int block_quote(struct mdview_ctx *ctx);
 int block_header(struct mdview_ctx *ctx, int level);
 
 // Create a new unordered list item and calls block_unordered_list() if needed
-int unordered_list_item(struct mdview_ctx *ctx);
+int unordered_list_item(struct mdview_ctx *ctx, char starter);

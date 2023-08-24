@@ -77,7 +77,7 @@ int end_special_sequence(struct mdview_ctx *ctx, char curr_ch) {
   switch (ctx->special_type) {
   case '*':
     if (ctx->special_cnt == 1 && ctx->line_start && curr_ch == ' ') {
-      if (!unordered_list_item(ctx))
+      if (!unordered_list_item(ctx, ctx->special_type))
         return 0;
       goto end;
     } else if (ctx->special_cnt == 1) {
@@ -100,7 +100,7 @@ int end_special_sequence(struct mdview_ctx *ctx, char curr_ch) {
     break;
   case '-':
     if (ctx->special_cnt == 1 && ctx->line_start && curr_ch == ' ') {
-      if (!unordered_list_item(ctx))
+      if (!unordered_list_item(ctx, ctx->special_type))
         return 1;
       goto end;
     } else if (ctx->special_cnt == 3 && ctx->line_start && curr_ch == '\n') {
@@ -121,12 +121,13 @@ int end_special_sequence(struct mdview_ctx *ctx, char curr_ch) {
       if (!toggle_inline_code(ctx))
         return 0;
       goto end;
-    } else if (ctx->special_cnt == 3 && ctx->line_start) {
-      if (ctx->block_type == 9) {
-        // end block code
+    } else if (ctx->special_cnt >= 3 && ctx->line_start) {
+      if (ctx->block_type == 9 && ctx->special_cnt == ctx->block_subtype) {
+        // end block code if we're in a code block and the number of backticks
+        // matches the number of backticks that started the block
         block_paragraph(ctx);
       } else {
-        if (!block_code(ctx))
+        if (!block_code(ctx, ctx->special_cnt))
           return 0;
       }
       goto end;
@@ -157,6 +158,13 @@ int end_special_sequence(struct mdview_ctx *ctx, char curr_ch) {
       goto end;
     }
     break;
+  case '+':
+    if (ctx->special_cnt == 1 && ctx->line_start && curr_ch == ' ') {
+      if (!unordered_list_item(ctx, ctx->special_type))
+        return 0;
+      goto end;
+    }
+    break;
   }
 
   // if not matched, then write the special characters as regular characters
@@ -180,7 +188,7 @@ int handle_char(struct mdview_ctx *ctx, char ch) {
 start:
   is_code = ctx->block_type == 9 || ctx->text_decoration & 16;
   if ((is_code && ch == '`') ||
-      (!is_code && !ctx->escaped && strchr("*-#`^~>", ch))) {
+      (!is_code && !ctx->escaped && strchr("*-#`^~>+", ch))) {
     int success = count_special_char(ctx, ch);
     if (!success) {
       return 0;
