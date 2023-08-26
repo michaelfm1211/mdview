@@ -42,7 +42,6 @@ static int handle_newline(struct mdview_ctx *ctx) {
   return 1;
 }
 
-
 // Count a special character and update the context. Returns 0 on error, 1 on
 // success, and 2 on success and a valid special sequence has ended.
 static int count_special_char(struct mdview_ctx *ctx, char ch) {
@@ -73,6 +72,11 @@ static int handle_regular_char(struct mdview_ctx *ctx, char ch) {
 }
 
 int end_special_sequence(struct mdview_ctx *ctx, char curr_ch) {
+  // quick heuristic to see if we should even bother trying to match a special
+  // sequence
+  if (ctx->special_cnt == 0)
+    return 1;
+
   // try to match to a valid special sequence
   switch (ctx->special_type) {
   case '*':
@@ -117,7 +121,9 @@ int end_special_sequence(struct mdview_ctx *ctx, char curr_ch) {
     }
     break;
   case '`':
-    if (ctx->special_cnt == 1) {
+    // we need to be careful here, this can be called from inside a code block!
+    if (ctx->special_cnt == 1 && ctx->block_type != 9) {
+      // don't do this if we're in a code block
       if (!toggle_inline_code(ctx))
         return 0;
       goto end;

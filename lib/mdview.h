@@ -16,7 +16,7 @@ struct mdview_ctx {
   struct mdview_buf html;
 
   // Parser state
-  int feeds; // number of times mdview_feed has been called
+  int feeds;                // number of times mdview_feed has been called
   unsigned int special_cnt; // Count consequetive special characters (#, *, `,
                             // etc.).
   char special_type; // what type of special character is being counted. NULL is
@@ -25,8 +25,8 @@ struct mdview_ctx {
   int indent;        // number of indents at the beginning of this line
 
   // Decorations/block state
-  unsigned int block_type; // 0 = text, 1-6 = heading, 7 = unordered list, 8 =
-                           // ordered list, 9 = code block, 10 = blockquote
+  int block_type; // 0 = text, 1-6 = heading, 7 = unordered list, 8 =
+                  // ordered list, 9 = code block, 10 = blockquote
   unsigned int block_subtype; // 0 = unused. For lists, first 8 bits are the
                               // starter used (1 = -, 2 = +, 3 = *), and next 8
                               // bits are the number of idents. In code blocks,
