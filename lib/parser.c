@@ -230,6 +230,10 @@ start:
       if (!bufcat(&ctx->html, "&gt;", 4))
         return 0;
       return 1;
+    } else if (ch == '\\') {
+      if (!bufcat(&ctx->html, "&#92;", 5))
+        return 0;
+      return 1;
     }
     ctx->escaped = 0;
   }

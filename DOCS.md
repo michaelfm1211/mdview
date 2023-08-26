@@ -49,11 +49,11 @@ decorations. The longest sequence is always matched:
 Note again that decorations are always **toggled**, not set. This can become
 important in situations similar to the following:
 ```
-regular text * this is in italics. ***is this bold italics?*** *  still regular?
+regular text * this is in italics. ***is this bold italics?*** *
 ```
 This will become:
 
-regular text * this is in italics. ***is this bold italics?*** * still regular?
+regular text * this is in italics. ***is this bold italics?*** *
 
 This is because the `***` sequence toggles bold and italics. If text is already
 in italics, then toggling it will turn it off. Even more important is that
@@ -122,7 +122,7 @@ While almost everything is build around blocks and decorations, not everything
 is. Below is a list of special character sequences that don't toggle a
 decoration or activate a block:
 - `---`: Writes a `<hr>` element (horizontal line).
-- `\\`: Escapes a character and prevents it from being counted towards a special
+- `\`: Escapes a character and prevents it from being counted towards a special
 character sequence. Escaping is available in all blocks.
 
 ##### Links
