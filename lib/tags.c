@@ -2,6 +2,7 @@
 #include "mdview.h"
 #include "util.h"
 #include <stdio.h>
+#include <string.h>
 
 /*
  * Decorations
@@ -9,10 +10,10 @@
 
 #define TOGGLE_DECORATION(bit, tag)                                            \
   if (ctx->text_decoration & (1 << bit)) {                                     \
-    if (!bufcat(&ctx->html, "</" tag ">", 3 + sizeof(tag) - 1))                \
+    if (!bufcat(ctx->curr_buf, "</" tag ">", 3 + sizeof(tag) - 1))             \
       return 0;                                                                \
   } else {                                                                     \
-    if (!bufcat(&ctx->html, "<" tag ">", 2 + sizeof(tag) - 1))                 \
+    if (!bufcat(ctx->curr_buf, "<" tag ">", 2 + sizeof(tag) - 1))              \
       return 0;                                                                \
   }                                                                            \
   ctx->text_decoration ^= (1 << bit);                                          \
@@ -65,22 +66,22 @@ int close_block(struct mdview_ctx *ctx) {
 
   switch (ctx->block_type) {
   case 0:
-    return bufcat(&ctx->html, "</p>", 4);
+    return bufcat(ctx->curr_buf, "</p>", 4);
   case 1:
   case 2:
   case 3:
   case 4:
   case 5:
   case 6:
-    return bufcat(&ctx->html, header_tag, 5);
+    return bufcat(ctx->curr_buf, header_tag, 5);
   case 7:
-    return bufcat(&ctx->html, "</li></ul>", 10);
+    return bufcat(ctx->curr_buf, "</li></ul>", 10);
   case 8:
-    return bufcat(&ctx->html, "</ol>", 5);
+    return bufcat(ctx->curr_buf, "</ol>", 5);
   case 9:
-    return bufcat(&ctx->html, "</code></pre>", 13);
+    return bufcat(ctx->curr_buf, "</code></pre>", 13);
   case 10:
-    return bufcat(&ctx->html, "</blockquote>", 13);
+    return bufcat(ctx->curr_buf, "</blockquote>", 13);
   default:
     fprintf(stderr, "Undefined newline behavior for block type %d\n",
             ctx->block_type);
@@ -93,13 +94,14 @@ int close_block(struct mdview_ctx *ctx) {
   close_block(ctx);                                                            \
   ctx->block_type = type;                                                      \
   ctx->block_subtype = subtype;                                                \
-  return bufcat(&ctx->html, "<" tag ">", 2 + sizeof(tag) - 1);
+  return bufcat(ctx->curr_buf, "<" tag ">", 2 + sizeof(tag) - 1);
 
 int block_paragraph(struct mdview_ctx *ctx) { BLOCK_TAG(0, 0, "p") }
 int block_unordered_list(struct mdview_ctx *ctx, char starter) {
   unsigned int subtype = (ctx->indent << 8 | starter);
   BLOCK_TAG(7, subtype, "ul")
 }
+
 // TODO: ordered list
 // int block_ordered_list(struct mdview_ctx *ctx) { BLOCK_TAG(8, 0, "ol")
 // }
@@ -112,8 +114,12 @@ int block_header(struct mdview_ctx *ctx, int level) {
   ctx->block_type = level;
   ctx->block_subtype = 0;
   char open_tag[4] = {'<', 'h', '0' + level, '>'};
-  return bufcat(&ctx->html, open_tag, 4);
+  return bufcat(ctx->curr_buf, open_tag, 4);
 }
+
+/*
+ * Functions unrelated to decorations or blocks.
+ */
 
 int unordered_list_item(struct mdview_ctx *ctx, char starter) {
   if (ctx->block_type != 7 || (ctx->block_subtype & 0xFF) != starter) {
@@ -123,11 +129,19 @@ int unordered_list_item(struct mdview_ctx *ctx, char starter) {
       return 0;
   } else {
     // otherwise we need to close the last list item
-    if (!bufcat(&ctx->html, "</li>", 5))
+    if (!bufcat(ctx->curr_buf, "</li>", 5))
       return 0;
   }
 
-  if (!bufcat(&ctx->html, "<li>", 4))
+  if (!bufcat(ctx->curr_buf, "<li>", 4))
     return 0;
   return 1;
+}
+
+int write_link(struct mdview_ctx *ctx, char *url, char *text) {
+  return bufcat(ctx->curr_buf, "<a href=\"", 9) &&
+         bufcat(ctx->curr_buf, url, strlen(url)) &&
+         bufcat(ctx->curr_buf, "\">", 2) &&
+         bufcat(ctx->curr_buf, text, strlen(text)) &&
+         bufcat(ctx->curr_buf, "</a>", 4);
 }

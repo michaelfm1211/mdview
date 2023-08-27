@@ -64,7 +64,8 @@ it'll just trust you even if you're wrong. The only chance libmdview gets to
 catch your mistakes is at the end of the document, when it knows that nothing
 else will follow. At the end, libmdview will close any unclosed decorations.
 Don't rely on this though. If you have multiple, then they may be closed out of
-order and create (technically, your browser will still work fine) invalid HTML.
+order and create invalid HTML (your browser will still be able to handle invalid
+HTMl, but you would rather have valid HTML).
 
 ##### Blocks
 
@@ -127,11 +128,31 @@ character sequence. Escaping is available in all blocks.
 
 ##### Links
 
-**TODO**
+libmdview accepts two ways of making a link:
+1. Providing the link text in brackets, immediately followed by the URL in
+parentheses. For example, `[Example text](https://example.com)` will become
+`<a href="https://example.com">Example text</a>`.
+2. Providing a URL in brackets and leaving the parentheses blank. If you use
+links like this, the URL and the title will be the same. For example,
+`[https://example.com]()` will become
+`<a href="https://example.com">https://example.com</a>`
+
+libmdview will not implicitly convert valid URL into links. If you want to
+create a link, then you must use one of the syntaxes listed above.
+
+Links are treated specially in libmdview because the regular rules must be
+broken to handle them. In HTML, the URL of a link precedes the link's text, but
+in markdown the URL comes after the text. This inherently requires libmdview to
+look ahead, but libmdview is restricted to only seeing one character at a time.
+To get around this, the library "cheats" by storing in memory anything that
+could become a link (more specially, any text between a `[` character and the
+next space or the next `]` character). If you are concerned about memory usage,
+see the "Considerations for Low-Memory Systems" section at the bottom of this
+document.
 
 ##### Tables
 
-**TODO**
+**TODO** Currently unimplemented.
 
 ### Special Character Sequences
 
@@ -167,4 +188,14 @@ counted as regular characters to the output.
 
 ### Considerations for Low-Memory Systems
 
-**TODO**
+##### Links
+
+To handle markdown links, libmdview has to store anything that could be a link
+in memory until the link ends or becomes invalid (which in that latter case the
+contents of the temporary buffer is written to the HTML output buffer). This
+might lead to lots of used memory if your document contains long portions of
+non-code text inside brackets. In most cases, you will be alright. If you must
+reduce memory usage as much as possible, then use raw HTML links instead of the
+markdown syntax.
+
+**TODO: more information**

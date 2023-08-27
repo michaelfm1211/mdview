@@ -13,7 +13,11 @@ struct mdview_ctx {
   const char *error_msg;
 
   // Contains finished HTML that has been generated and is about to be returned.
-  struct mdview_buf html;
+  struct mdview_buf html_out;
+  // A temporary buffer (used for links).
+  struct mdview_buf temp_buf;
+  // Pointer to the current buffer
+  struct mdview_buf *curr_buf;
 
   // Parser state
   int feeds;                // number of times mdview_feed has been called
@@ -32,7 +36,7 @@ struct mdview_ctx {
                               // bits are the number of idents. In code blocks,
                               // this is the number of backticks used.
   int escaped;                // 0 = no, 1 = yes
-  int pending_link;           // 0 = no, 1 = yes
+  int pending_link;           // 0 = no, 1 = text part, 2 = URL part
   unsigned int text_decoration; // bit field: 1 = italics, 2 = bold, 4 = strike,
                                 // 8 = subscript, 16 = inline code,
                                 // 32 = superscript

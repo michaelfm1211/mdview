@@ -23,7 +23,7 @@ static int handle_newline(struct mdview_ctx *ctx) {
   case 7:  // unordered list
   case 8:  // ordered list
   case 10: // blockquote
-    return bufadd(&ctx->html, ' ');
+    return bufadd(ctx->curr_buf, ' ');
   case 1: // headers
   case 2:
   case 3:
@@ -32,7 +32,7 @@ static int handle_newline(struct mdview_ctx *ctx) {
   case 6:
     return block_paragraph(ctx);
   case 9:
-    return bufadd(&ctx->html, '\n');
+    return bufadd(ctx->curr_buf, '\n');
   default:
     fprintf(stderr, "Undefined newline behavior for block type %d\n",
             ctx->block_type);
@@ -62,11 +62,26 @@ static int count_special_char(struct mdview_ctx *ctx, char ch) {
 
 // Write a regular, non-special character to the buffer.
 static int handle_regular_char(struct mdview_ctx *ctx, char ch) {
+  // this is a regular char, so the escape should expire after this char.
+  ctx->escaped = 0;
+
+  // end the current link if we're in one and the link is invalid
+  if (ctx->pending_link && ctx->temp_buf.len > 0) {
+    char last_link_char = ctx->temp_buf.buf[ctx->temp_buf.len - 1];
+    // invalidate this link if we're between the text and the URL, or if there
+    // is a space in the URL.
+    if ((ctx->pending_link == 1 && last_link_char == '\0') ||
+        (ctx->pending_link == 2 && ch == ' ')) {
+      if (!end_link(ctx))
+        return 0;
+    }
+  }
+
   // add space if this is the beginning of the line
   if (ctx->line_start)
     ctx->line_start = 0;
 
-  if (!bufadd(&ctx->html, ch))
+  if (!bufadd(ctx->curr_buf, ch))
     return 0;
   return 1;
 }
@@ -108,7 +123,7 @@ int end_special_sequence(struct mdview_ctx *ctx, char curr_ch) {
         return 1;
       goto end;
     } else if (ctx->special_cnt == 3 && ctx->line_start && curr_ch == '\n') {
-      if (!bufcat(&ctx->html, "<hr>", 4))
+      if (!bufcat(ctx->curr_buf, "<hr>", 4))
         return 0;
       goto end;
     }
@@ -187,6 +202,62 @@ end:
   return 2;
 }
 
+int end_link(struct mdview_ctx *ctx) {
+  // return if we're not in a link
+  if (!ctx->pending_link)
+    return 1;
+
+  // if we haven't finished the link, then just write the text as regular
+  if (ctx->temp_buf.len == 0)
+    return bufadd(&ctx->html_out, '[');
+  char last_char = ctx->temp_buf.buf[ctx->temp_buf.len - 1];
+  if (ctx->pending_link == 1) {
+    if (!bufadd(&ctx->html_out, '['))
+      return 0;
+
+    if (last_char == '\0') {
+      // ended text, but before the URL
+      if (!bufcat(&ctx->html_out, ctx->temp_buf.buf, ctx->temp_buf.len - 1) ||
+          !bufadd(&ctx->html_out, ']'))
+        return 0;
+      goto end;
+    } else {
+      // ended in the middle of the text
+      if (!bufcat(&ctx->html_out, ctx->temp_buf.buf, ctx->temp_buf.len))
+        return 0;
+      goto end;
+    }
+  } else if (ctx->pending_link == 2 && last_char != '\0') {
+    // ended in the middle of the URL
+    size_t text_len = strlen(ctx->temp_buf.buf);
+    if (!bufadd(&ctx->html_out, '[') ||
+        !bufcat(&ctx->html_out, ctx->temp_buf.buf, text_len) ||
+        !bufcat(&ctx->html_out, "](", 2) ||
+        !bufcat(&ctx->html_out, ctx->temp_buf.buf + text_len + 1,
+                ctx->temp_buf.len - text_len - 1))
+      return 0;
+    goto end;
+  }
+
+  // The temporary buffer is split into two consecutive strings, the first is
+  // the text of the link, and the second is the URL of the link.
+  char *text = ctx->temp_buf.buf;
+  char *url = strchr(ctx->temp_buf.buf, '\0') + 1;
+  // If the URL is empty, then use the text as the URL.
+  if (*url == '\0')
+    url = text;
+
+  ctx->curr_buf = &ctx->html_out;
+  if (!write_link(ctx, url, text))
+    return 0;
+
+end:
+  ctx->curr_buf = &ctx->html_out;
+  bufclear(&ctx->temp_buf);
+  ctx->pending_link = 0;
+  return 1;
+}
+
 int handle_char(struct mdview_ctx *ctx, char ch) {
   // If this is code, then only handle handle backtick as special characters.
   // Otherwise, handle all unescaped special characters.
@@ -219,25 +290,61 @@ start:
   // re-check if we're in a code block; we might have just entered one.
   is_code = ctx->block_type == 9 || ctx->text_decoration & 16;
 
-  // handle escaped characters
+  // handle link special characters, if any
+  switch (ch) {
+  case '[':
+    // start link
+    if (!ctx->escaped && !is_code && !ctx->pending_link) {
+      ctx->curr_buf = &ctx->temp_buf;
+      ctx->pending_link = 1;
+      return 1;
+    }
+    return handle_regular_char(ctx, ch);
+  case ']':
+    // end of the text part.
+    if (ctx->pending_link)
+      return bufadd(&ctx->temp_buf, '\0');
+    return handle_regular_char(ctx, ch);
+  case '(':
+    // beginning of the URL part. Note: there might be characters between the
+    // ']' and the '(' that invalidate the link, so this case and the previous
+    // one must be separate. hangle_regular_char() will prematurely end the
+    // link if it encounters a character that isn't part of a link.
+    if (ctx->pending_link) {
+      ctx->pending_link = 2;
+      return 1;
+    }
+    return handle_regular_char(ctx, ch);
+  case ')':
+    // end of the URL part, and the link as a whole. end the link and write it.
+    if (ctx->pending_link) {
+      if (!bufadd(&ctx->temp_buf, '\0'))
+        return 0;
+      return end_link(ctx);
+    }
+    return handle_regular_char(ctx, ch);
+  }
+
+  // handle escaped characters that must be rewritten
   if (ctx->escaped || is_code) {
     // handle escaped character that require rewrites
     if (ch == '<') {
-      if (!bufcat(&ctx->html, "&lt;", 4))
+      if (!bufcat(ctx->curr_buf, "&lt;", 4))
         return 0;
       return 1;
     } else if (ch == '>') {
-      if (!bufcat(&ctx->html, "&gt;", 4))
+      if (!bufcat(ctx->curr_buf, "&gt;", 4))
         return 0;
       return 1;
     } else if (ch == '\\') {
-      if (!bufcat(&ctx->html, "&#92;", 5))
+      if (!bufcat(ctx->curr_buf, "&#92;", 5))
         return 0;
       return 1;
     }
-    ctx->escaped = 0;
   }
 
+  // handle regular characters and special characters that aren't part of a
+  // special sequence.
   switch (ch) {
   case '\\':
     ctx->escaped = 1;

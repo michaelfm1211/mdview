@@ -34,3 +34,6 @@ int block_header(struct mdview_ctx *ctx, int level);
 
 // Create a new unordered list item and calls block_unordered_list() if needed
 int unordered_list_item(struct mdview_ctx *ctx, char starter);
+
+// Write the currently
+int write_link(struct mdview_ctx *ctx, char *url, char *text);

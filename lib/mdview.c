@@ -9,11 +9,19 @@
 int __attribute__((visibility("default"))) mdview_init(struct mdview_ctx *ctx) {
   ctx->error_msg = NULL;
 
-  // setup the buffer
-  ctx->html.buf = malloc(BUFSIZ);
-  ctx->html.buf[0] = '\0';
-  ctx->html.len = 0;
-  ctx->html.cap = BUFSIZ;
+  // setup the HTML buffer
+  ctx->html_out.buf = malloc(BUFSIZ);
+  ctx->html_out.buf[0] = '\0';
+  ctx->html_out.len = 0;
+  ctx->html_out.cap = BUFSIZ;
+
+  // setup the temporary buffer
+  ctx->temp_buf.buf = NULL;
+  ctx->temp_buf.len = 0;
+  ctx->temp_buf.cap = 0;
+
+  // set the default buffer to the HTML buffer
+  ctx->curr_buf = &ctx->html_out;
 
   // setup parsing state
   ctx->feeds = 0;
@@ -30,7 +38,7 @@ int __attribute__((visibility("default"))) mdview_init(struct mdview_ctx *ctx) {
   ctx->text_decoration = 0;
 
   // start with a paragraph
-  if (!bufcat(&ctx->html, "<p>", 3))
+  if (!bufcat(&ctx->html_out, "<p>", 3))
     return 1;
   return 0;
 }
@@ -39,7 +47,7 @@ char *__attribute__((visibility("default")))
 mdview_feed(struct mdview_ctx *ctx, const char *md) {
   // reset the HTML buffer from the last feed, if this is not the first feed
   if (ctx->feeds > 0) {
-    bufclear(&ctx->html);
+    bufclear(&ctx->html_out);
     ctx->error_msg = NULL;
   }
   ctx->feeds++;
@@ -51,18 +59,22 @@ mdview_feed(struct mdview_ctx *ctx, const char *md) {
     md++;
   }
 
-  return ctx->html.buf;
+  return ctx->html_out.buf;
 }
 
 char *__attribute__((visibility("default")))
 mdview_flush(struct mdview_ctx *ctx) {
   if (ctx->feeds > 0) {
-    bufclear(&ctx->html);
+    bufclear(&ctx->html_out);
     ctx->error_msg = NULL;
   }
 
   // end any pending special sequences
   if (!end_special_sequence(ctx, 0))
+    return NULL;
+
+  // end any pending special sequences
+  if (!end_link(ctx))
     return NULL;
 
   // end all decorations
@@ -73,13 +85,20 @@ mdview_flush(struct mdview_ctx *ctx) {
   if (!close_block(ctx))
     return NULL;
 
-  return ctx->html.buf;
+  return ctx->html_out.buf;
 }
 
 void __attribute__((visibility("default")))
 mdview_free(struct mdview_ctx *ctx) {
   ctx->error_msg = NULL;
-  free(ctx->html.buf);
-  ctx->html.len = 0;
-  ctx->html.cap = 0;
+
+  // free the HTML buffer
+  free(ctx->html_out.buf);
+  ctx->html_out.len = 0;
+  ctx->html_out.cap = 0;
+
+  // free temporary buffer
+  free(ctx->temp_buf.buf);
+  ctx->temp_buf.len = 0;
+  ctx->temp_buf.cap = 0;
 }

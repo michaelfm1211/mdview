@@ -5,7 +5,11 @@
 
 int bufadd(struct mdview_buf *buf, char ch) {
   // make sure there is enough space in the buffer
-  if (buf->len + 1 >= buf->cap) {
+  while (buf->len + 1 >= buf->cap) {
+    // if we haven't used this buffer before, then make it the default size
+    if (buf->cap == 0)
+      buf->cap = BUFSIZ;
+
     buf->cap *= 2;
     char *tmp = realloc(buf->buf, buf->cap);
     if (!tmp) {
@@ -24,6 +28,10 @@ int bufadd(struct mdview_buf *buf, char ch) {
 int bufcat(struct mdview_buf *buf, char *str, size_t str_len) {
   // make sure there is enough space in the buffer
   if (buf->len + str_len >= buf->cap) {
+    // if we haven't used this buffer before, then make it the default size
+    if (buf->cap == 0)
+      buf->cap = BUFSIZ;
+
     buf->cap *= 2;
     char *tmp = realloc(buf->buf, buf->cap);
     if (!tmp) {
