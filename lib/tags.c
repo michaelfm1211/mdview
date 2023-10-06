@@ -9,6 +9,8 @@
  */
 
 #define TOGGLE_DECORATION(bit, tag)                                            \
+  if (ctx->block_type == -1)                                                   \
+    block_paragraph(ctx);                                                      \
   if (ctx->text_decoration & (1 << bit)) {                                     \
     if (!bufcat(ctx->curr_buf, "</" tag ">", 3 + sizeof(tag) - 1))             \
       return 0;                                                                \
@@ -72,7 +74,8 @@ int close_block(struct mdview_ctx *ctx) {
     retval = 1;
     break;
   case 0:
-    return bufcat(ctx->curr_buf, "</p>", 4);
+    retval = bufcat(ctx->curr_buf, "</p>", 4);
+    break;
   case 1:
   case 2:
   case 3:

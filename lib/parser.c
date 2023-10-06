@@ -8,7 +8,7 @@
 // Handle a newline character and update figure out which block elements need
 // to be created/closed.
 static int handle_newline(struct mdview_ctx *ctx) {
-  if (ctx->line_start && ctx->block_type != 9) {
+  if (ctx->line_start && ctx->block_type != -1 && ctx->block_type != 9) {
     // if there has been two consequetive newlines, then close the current
     // block.
     close_block(ctx);
@@ -66,6 +66,7 @@ static int count_special_char(struct mdview_ctx *ctx, char ch) {
 static int handle_regular_char(struct mdview_ctx *ctx, char ch) {
   // this is a regular char, so the escape should expire after this char.
   ctx->escaped = 0;
+  ctx->line_start = 0;
 
   // end the current link if we're in one and the link is invalid
   if (ctx->pending_link && ctx->temp_buf.len > 0) {
@@ -78,10 +79,6 @@ static int handle_regular_char(struct mdview_ctx *ctx, char ch) {
         return 0;
     }
   }
-
-  // add space if this is the beginning of the line
-  if (ctx->line_start && ctx->block_type != 0)
-    ctx->line_start = 0;
 
   // if we have nowhere to write to, then start a paragraph
   if (ctx->block_type == -1)
@@ -345,17 +342,11 @@ start:
   if (ctx->escaped || is_code) {
     // handle escaped character that require rewrites
     if (ch == '<') {
-      if (!bufcat(ctx->curr_buf, "&lt;", 4))
-        return 0;
-      return 1;
+      return bufcat(ctx->curr_buf, "&lt;", 4);
     } else if (ch == '>') {
-      if (!bufcat(ctx->curr_buf, "&gt;", 4))
-        return 0;
-      return 1;
+      return bufcat(ctx->curr_buf, "&gt;", 4);
     } else if (ch == '\\') {
-      if (!bufcat(ctx->curr_buf, "&#92;", 5))
-        return 0;
-      return 1;
+      return bufcat(ctx->curr_buf, "&#92;", 5);
     }
   }
 
