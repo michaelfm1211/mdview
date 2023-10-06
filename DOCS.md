@@ -4,7 +4,7 @@ This is the official libmdview documentation. This document will overview the
 intended behavior of libmdview. If you believe the actual behavior is
 inconsistent with what is described here, please submit a bug request describing
 the differences. This document will describe both quirks/features that are
-relevant to end-users and the inner-workings of libmdview that are relevant to
+relevant to end-users and the inner workings of libmdview that are relevant to
 developers.
 
 ### Streaming Architecture
@@ -16,7 +16,7 @@ state object being visible to the current handler; we can never look ahead.
 While this complicates the task for libmdview developers, it has the potential
 to make it much easier for the end user. With few exceptions, mdview can handle
 extremely long files by parsing them in sequential blocks of arbitrary, end-user
-chosen length. libmdview also has a better chance of working on memory limited
+chosen length. libmdview also has a better chance of working on memory-limited
 devides because only the current block, a context object, and a temporary buffer
 need to be stored.
 
@@ -55,13 +55,13 @@ This will become:
 
 regular text * this is in italics. ***is this bold italics?*** *
 
-This is because the `***` sequence toggles bold and italics. If text is already
+This is because the `***` sequence toggles bold and italics. If the text is already
 in italics, then toggling it will turn it off. Even more important is that
 another `*` will toggle it again to become on. If you don't count, then the rest
-of your document could become italic. This is ultimately an effect of libmdview
+of your document could become italics. This is ultimately an effect of libmdview
 handling streams: libmdview can't look ahead to see what you're trying to do, so
 it'll just trust you even if you're wrong. The only chance libmdview gets to
-catch your mistakes is at the end of the document, when it knows that nothing
+catch your mistakes is at the end of the document when it knows that nothing
 else will follow. At the end, libmdview will close any unclosed decorations.
 Don't rely on this though. If you have multiple, then they may be closed out of
 order and create invalid HTML (your browser will still be able to handle invalid
@@ -75,7 +75,7 @@ by strict rules when using blocks:
 close the current one.
 - Each block defines when it should end (in `close_block` in `lib/tags.c`).
 There is no unilateral way of breaking out of a block. You can think of a block
-as being a kind of subroutine. The only except to this is that the current block
+as being a kind of subroutine. The only exception to this is that the current block
 is always ended when the end of the document is reached.
 - Each block may define how characters are handled. A paragraph block is
 considered to be "standard". Most blocks work like paragraphs do except they
@@ -88,21 +88,21 @@ Currently, multiple functions must be changed to alter the behavior of a block
 or add a new type. However, libmdview's project structure may change in the
 future to better reflect the modularity of blocks.
 
-Below is a list of all currently-supported blocks and what special character
+Below is a list of all currently supported blocks and what special character
 sequences are used to activate them:
 - Paragraph: considered the "default". All decorations and special character
 sequences are supported. The document automatically begins in a paragraph block
 and a new paragraph block is started when most blocks end.
-- Headers: activated when a line beings with one to six hashtag (`#`)
+- Headers: activated when a line begins with one to six hashtags (`#`)
 characters followed by a space, and ended on the next newline. All text between
 the start sequence and the newline is wrapped in an HTML `<hx></hx>` block,
 where `x` is the number of hashtags in the start sequence. A new paragraph block
 is begun when this block ends.
 - Unordered list: activated when a line begins with a `-` character followed by
-a space, and ended on two consecutive newlines. All text between the first `- `
-and the two consecutive newlines is wrapped in an HTML `<ul></ul>` block. Inside
+a space and ends on two consecutive newlines. All text between the first `- `
+and the two consecutive newlines are wrapped in an HTML `<ul></ul>` block. Inside
 the block, a `<li></li>` element is created for every line beginning with a `- `
-sequence. A new paragraph blocks begins when this element ends.
+sequence. A new paragraph block begins when this element ends.
 - Ordered list: activated when a line begins with a number followed by a `.`
 character and a space. This is identical to the unordered list block, except
 that the HTML `<ol></ol>` element is used and list items begin as previously
@@ -110,16 +110,16 @@ described.
 - Code block: activated when a line begins with three or more backtick (\`)
 characters. Inside a code block, all characters are escaped and wrapped in a
 HTML `<pre><code></code></pre>` block. A code block ends when the same sequence
-that begun it is found at the beginning of a line. A new paragraph block begins
+that begins it is found at the beginning of a line. A new paragraph block begins
 when this block ends.
-- Quote blocks: activated when a line beings with the `>` character followed by
-a space, and ended on two consecutive newlines. All text between the start
+- Quote blocks: activated when a line begins with the `>` character followed by
+a space and ends on two consecutive newlines. All text between the start
 sequence and the newline is wrapped in an HTML `<blockquote></blockquote>`
-block. A new paragraph block is begun when this this block ends.
+block. A new paragraph block is begun when this block ends.
 
 ### Special Cases
 
-While almost everything is build around blocks and decorations, not everything
+While almost everything is built around blocks and decorations, not everything
 is. Below is a list of special character sequences that don't toggle a
 decoration or activate a block:
 - `---`: Writes a `<hr>` element (horizontal line).
@@ -129,10 +129,10 @@ character sequence. Escaping is available in all blocks.
 ##### Links
 
 libmdview accepts two ways of making a link:
-1. Providing the link text in brackets, immediately followed by the URL in
+1. Provide the link text in brackets, immediately followed by the URL in
 parentheses. For example, `[Example text](https://example.com)` will become
 `<a href="https://example.com">Example text</a>`.
-2. Providing a URL in brackets and leaving the parentheses blank. If you use
+2. Provide a URL in brackets and leave the parentheses blank. If you use
 links like this, the URL and the title will be the same. For example,
 `[https://example.com]()` will become
 `<a href="https://example.com">https://example.com</a>`
@@ -140,12 +140,12 @@ links like this, the URL and the title will be the same. For example,
 libmdview will not implicitly convert valid URL into links. If you want to
 create a link, then you must use one of the syntaxes listed above.
 
-Links are treated specially in libmdview because the regular rules must be
+Links are treated differently in libmdview because the regular rules must be
 broken to handle them. In HTML, the URL of a link precedes the link's text, but
-in markdown the URL comes after the text. This inherently requires libmdview to
+in markdown, the URL comes after the text. This inherently requires libmdview to
 look ahead, but libmdview is restricted to only seeing one character at a time.
 To get around this, the library "cheats" by storing in memory anything that
-could become a link (more specially, any text between a `[` character and the
+could become a link (more specifically, any text between a `[` character and the
 next space or the next `]` character).
 
 ##### Tables
@@ -165,9 +165,9 @@ scenes.
 Before any character is handled, a check is done to determine whether or not it
 can be counted as a special character in the current block. If not (or it is
 escaped), then it will end any ongoing special sequences (as they have now been
-interrupted by this non-special chaarcer) and be written as output. If it is,
+interrupted by this non-special character) and be written as output. If it is,
 then we do some more checks. If the special character (that is, the current
-character which has now been determined to be special) is different from the
+character that has now been determined to be special) is different from the
 last special character we counted or we didn't previously count a special
 character, then we set the special sequence type to the current character (or a
 special code, if this special sequence contains different characters) and set
