@@ -146,13 +146,13 @@ in markdown the URL comes after the text. This inherently requires libmdview to
 look ahead, but libmdview is restricted to only seeing one character at a time.
 To get around this, the library "cheats" by storing in memory anything that
 could become a link (more specially, any text between a `[` character and the
-next space or the next `]` character). If you are concerned about memory usage,
-see the "Considerations for Low-Memory Systems" section at the bottom of this
-document.
+next space or the next `]` character).
 
 ##### Tables
 
-**TODO** Currently unimplemented.
+Markdown table syntax is currently unsupported and it is unlikely that it will
+become supported in the future. If you need to create a table, then use raw
+HTML.
 
 ### Special Character Sequences
 
@@ -185,17 +185,3 @@ special character sequences. If there is a match, then the action associated
 with that sequence is done. If it is not matched, then it is an invalid
 sequence and libmdview will write all the special characters that have been
 counted as regular characters to the output.
-
-### Considerations for Low-Memory Systems
-
-##### Links
-
-To handle markdown links, libmdview has to store anything that could be a link
-in memory until the link ends or becomes invalid (which in that latter case the
-contents of the temporary buffer is written to the HTML output buffer). This
-might lead to lots of used memory if your document contains long portions of
-non-code text inside brackets. In most cases, you will be alright. If you must
-reduce memory usage as much as possible, then use raw HTML links instead of the
-markdown syntax.
-
-**TODO: more information**

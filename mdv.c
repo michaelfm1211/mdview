@@ -20,7 +20,7 @@ void write_html(struct mdview_ctx *ctx, char *html) {
 }
 
 int main(int argc, char **argv) {
-  if (argc != 0) {
+  if (argc != 1) {
     fprintf(stderr, "usage: %s < input.md > output.html\n", argv[0]);
     exit(EXIT_FAILURE);
   }
