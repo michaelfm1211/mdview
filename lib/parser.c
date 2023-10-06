@@ -208,6 +208,44 @@ end:
   return 2;
 }
 
+// 0 means error, -1 = success but no link handled, 1 = success and link handled
+static int handle_link_special_char(struct mdview_ctx *ctx, char ch) {
+  switch (ch) {
+  case '[':
+    // start link
+    if (!ctx->escaped && !ctx->pending_link) {
+      ctx->curr_buf = &ctx->temp_buf;
+      ctx->pending_link = 1;
+      return 1;
+    }
+    return handle_regular_char(ctx, ch);
+  case ']':
+    // end of the text part.
+    if (ctx->pending_link)
+      return bufadd(&ctx->temp_buf, '\0');
+    return handle_regular_char(ctx, ch);
+  case '(':
+    // beginning of the URL part. Note: there might be characters between the
+    // ']' and the '(' that invalidate the link, so this case and the previous
+    // one must be separate. hangle_regular_char() will prematurely end the
+    // link if it encounters a character that isn't part of a link.
+    if (ctx->pending_link) {
+      ctx->pending_link = 2;
+      return 1;
+    }
+    return handle_regular_char(ctx, ch);
+  case ')':
+    // end of the URL part, and the link as a whole. end the link and write it.
+    if (ctx->pending_link) {
+      if (!bufadd(&ctx->temp_buf, '\0'))
+        return 0;
+      return end_link(ctx);
+    }
+    return handle_regular_char(ctx, ch);
+  }
+  return -1;
+}
+
 int end_link(struct mdview_ctx *ctx) {
   // return if we're not in a link
   if (!ctx->pending_link)
@@ -296,39 +334,11 @@ start:
   // re-check if we're in a code block; we might have just entered one.
   is_code = ctx->block_type == 9 || ctx->text_decoration & 16;
 
-  // handle link special characters, if any
-  switch (ch) {
-  case '[':
-    // start link
-    if (!ctx->escaped && !is_code && !ctx->pending_link) {
-      ctx->curr_buf = &ctx->temp_buf;
-      ctx->pending_link = 1;
-      return 1;
-    }
-    return handle_regular_char(ctx, ch);
-  case ']':
-    // end of the text part.
-    if (ctx->pending_link)
-      return bufadd(&ctx->temp_buf, '\0');
-    return handle_regular_char(ctx, ch);
-  case '(':
-    // beginning of the URL part. Note: there might be characters between the
-    // ']' and the '(' that invalidate the link, so this case and the previous
-    // one must be separate. hangle_regular_char() will prematurely end the
-    // link if it encounters a character that isn't part of a link.
-    if (ctx->pending_link) {
-      ctx->pending_link = 2;
-      return 1;
-    }
-    return handle_regular_char(ctx, ch);
-  case ')':
-    // end of the URL part, and the link as a whole. end the link and write it.
-    if (ctx->pending_link) {
-      if (!bufadd(&ctx->temp_buf, '\0'))
-        return 0;
-      return end_link(ctx);
-    }
-    return handle_regular_char(ctx, ch);
+  // handle link special characters, if any. return if one was handled.
+  if (!is_code) {
+    int link_handled = handle_link_special_char(ctx, ch);
+    if (link_handled == 0 || link_handled == 1)
+      return link_handled;
   }
 
   // handle escaped characters that must be rewritten
