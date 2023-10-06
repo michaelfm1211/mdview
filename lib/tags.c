@@ -60,11 +60,17 @@ int end_all_decorations(struct mdview_ctx *ctx) {
  * Blocks
  */
 
-int close_block(struct mdview_ctx *ctx) {
-  // create this in advance, just in case we need it
+static inline int close_header_block(struct mdview_ctx *ctx) {
   char header_tag[5] = {'<', '/', 'h', '0' + ctx->block_type, '>'};
+  return bufcat(ctx->curr_buf, header_tag, 5);
+}
 
+int close_block(struct mdview_ctx *ctx) {
+  int retval;
   switch (ctx->block_type) {
+  case -1:
+    retval = 1;
+    break;
   case 0:
     return bufcat(ctx->curr_buf, "</p>", 4);
   case 1:
@@ -73,25 +79,35 @@ int close_block(struct mdview_ctx *ctx) {
   case 4:
   case 5:
   case 6:
-    return bufcat(ctx->curr_buf, header_tag, 5);
+    retval = close_header_block(ctx);
+    break;
   case 7:
-    return bufcat(ctx->curr_buf, "</li></ul>", 10);
+    retval = bufcat(ctx->curr_buf, "</li></ul>", 10);
+    break;
   case 8:
-    return bufcat(ctx->curr_buf, "</ol>", 5);
+    retval = bufcat(ctx->curr_buf, "</ol>", 5);
+    break;
   case 9:
-    return bufcat(ctx->curr_buf, "</code></pre>", 13);
+    retval = bufcat(ctx->curr_buf, "</code></pre>", 13);
+    break;
   case 10:
-    return bufcat(ctx->curr_buf, "</blockquote>", 13);
+    retval = bufcat(ctx->curr_buf, "</blockquote>", 13);
+    break;
   default:
-    fprintf(stderr, "Undefined newline behavior for block type %d\n",
+    fprintf(stderr, "Failed to close nonexistant block type %d\n",
             ctx->block_type);
-    return 0;
+    retval = 0;
+    break;
   }
-  return 1;
+
+  ctx->block_type = -1;
+  ctx->block_subtype = 0;
+  return retval;
 }
 
 #define BLOCK_TAG(type, subtype, tag)                                          \
-  close_block(ctx);                                                            \
+  if (!close_block(ctx))                                                       \
+    return 1;                                                                  \
   ctx->block_type = type;                                                      \
   ctx->block_subtype = subtype;                                                \
   return bufcat(ctx->curr_buf, "<" tag ">", 2 + sizeof(tag) - 1);

@@ -11,7 +11,7 @@ static int handle_newline(struct mdview_ctx *ctx) {
   if (ctx->line_start && ctx->block_type != 9) {
     // if there has been two consequetive newlines, then close the current
     // block.
-    block_paragraph(ctx);
+    close_block(ctx);
   } else {
     ctx->line_start = 1;
     ctx->indent = 0;
@@ -19,6 +19,8 @@ static int handle_newline(struct mdview_ctx *ctx) {
 
   // different newline behavior depending on block
   switch (ctx->block_type) {
+  case -1:
+    return 1;
   case 0:  // paragraph
   case 7:  // unordered list
   case 8:  // ordered list
@@ -30,7 +32,7 @@ static int handle_newline(struct mdview_ctx *ctx) {
   case 4:
   case 5:
   case 6:
-    return block_paragraph(ctx);
+    return close_block(ctx);
   case 9:
     return bufadd(ctx->curr_buf, '\n');
   default:
@@ -78,8 +80,12 @@ static int handle_regular_char(struct mdview_ctx *ctx, char ch) {
   }
 
   // add space if this is the beginning of the line
-  if (ctx->line_start)
+  if (ctx->line_start && ctx->block_type != 0)
     ctx->line_start = 0;
+
+  // if we have nowhere to write to, then start a paragraph
+  if (ctx->block_type == -1)
+    block_paragraph(ctx);
 
   if (!bufadd(ctx->curr_buf, ch))
     return 0;
@@ -146,7 +152,7 @@ int end_special_sequence(struct mdview_ctx *ctx, char curr_ch) {
       if (ctx->block_type == 9 && ctx->special_cnt == ctx->block_subtype) {
         // end block code if we're in a code block and the number of backticks
         // matches the number of backticks that started the block
-        block_paragraph(ctx);
+        close_block(ctx);
       } else {
         if (!block_code(ctx, ctx->special_cnt))
           return 0;

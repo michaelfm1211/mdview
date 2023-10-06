@@ -30,16 +30,13 @@ int __attribute__((visibility("default"))) mdview_init(struct mdview_ctx *ctx) {
   ctx->line_start = 1;
 
   // setup decorations state
-  ctx->block_type = 0;
+  ctx->block_type = -1;
   ctx->block_subtype = 0;
   ctx->indent = 0;
   ctx->escaped = 0;
   ctx->pending_link = 0;
   ctx->text_decoration = 0;
 
-  // start with a paragraph
-  if (!bufcat(&ctx->html_out, "<p>", 3))
-    return 1;
   return 0;
 }
 

@@ -24,12 +24,12 @@ struct mdview_ctx {
   unsigned int special_cnt; // Count consequetive special characters (#, *, `,
                             // etc.).
   char special_type; // what type of special character is being counted. NULL is
-                     // none, anythign else is the character being counted.
+                     // none, anything else is the character being counted.
   int line_start;    // 0 = not beginng of line, 1 = beginning of line
   int indent;        // number of indents at the beginning of this line
 
   // Decorations/block state
-  int block_type; // 0 = text, 1-6 = heading, 7 = unordered list, 8 =
+  int block_type; // -1 = none, 0 = text, 1-6 = heading, 7 = unordered list, 8 =
                   // ordered list, 9 = code block, 10 = blockquote
   unsigned int block_subtype; // 0 = unused. For lists, first 8 bits are the
                               // starter used (1 = -, 2 = +, 3 = *), and next 8
