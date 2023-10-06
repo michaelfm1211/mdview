@@ -19,7 +19,12 @@ void write_html(struct mdview_ctx *ctx, char *html) {
   }
 }
 
-int main(void) {
+int main(int argc, char **argv) {
+  if (argc != 0) {
+    fprintf(stderr, "usage: %s < input.md > output.html\n", argv[0]);
+    exit(EXIT_FAILURE);
+  }
+
   struct mdview_ctx ctx;
   mdview_init(&ctx);
 
