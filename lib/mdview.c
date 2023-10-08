@@ -28,6 +28,7 @@ int __attribute__((visibility("default"))) mdview_init(struct mdview_ctx *ctx) {
   ctx->special_cnt = 0;
   ctx->special_type = 0;
   ctx->line_start = 1;
+  ctx->id_cnt = 0;
 
   // setup decorations state
   ctx->block_type = -1;

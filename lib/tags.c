@@ -132,8 +132,19 @@ int block_header(struct mdview_ctx *ctx, int level) {
   close_block(ctx);
   ctx->block_type = level;
   ctx->block_subtype = 0;
-  char open_tag[4] = {'<', 'h', '0' + level, '>'};
-  return bufcat(ctx->curr_buf, open_tag, 4);
+
+  // get a unique ID by incrementing the counter
+  ctx->id_cnt++;
+  unsigned int n = ctx->id_cnt;
+  size_t n_len = 0;
+  while (n > 0) {
+    n_len++;
+    n /= 10;
+  }
+
+  char open_tag[11 + n_len];
+  snprintf(open_tag, 11 + n_len, "<h%d id=\"%u\">", level, ctx->id_cnt);
+  return bufcat(ctx->curr_buf, open_tag, 10 + n_len);
 }
 
 /*

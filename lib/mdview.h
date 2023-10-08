@@ -27,6 +27,7 @@ struct mdview_ctx {
                      // none, anything else is the character being counted.
   int line_start;    // 0 = not beginng of line, 1 = beginning of line
   int indent;        // number of indents at the beginning of this line
+  unsigned int id_cnt; // counter used to give unique HTML IDs to tags.
 
   // Decorations/block state
   int block_type; // -1 = none, 0 = text, 1-6 = heading, 7 = unordered list, 8 =

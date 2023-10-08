@@ -63,6 +63,7 @@ static int count_special_char(struct mdview_ctx *ctx, char ch) {
 }
 
 // Write a regular, non-special character to the buffer.
+
 static int handle_regular_char(struct mdview_ctx *ctx, char ch) {
   // this is a regular char, so the escape should expire after this char.
   ctx->escaped = 0;
@@ -132,7 +133,8 @@ int end_special_sequence(struct mdview_ctx *ctx, char curr_ch) {
     }
     break;
   case '#':
-    if (ctx->special_cnt >= 1 && ctx->special_cnt <= 6 && curr_ch == ' ') {
+    if (ctx->special_cnt >= 1 && ctx->special_cnt <= 6 && ctx->line_start &&
+        curr_ch == ' ') {
       if (!block_header(ctx, ctx->special_cnt))
         return 0;
       goto end;
