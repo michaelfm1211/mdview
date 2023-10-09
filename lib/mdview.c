@@ -1,12 +1,12 @@
 #include "mdview.h"
-#include "util.h"
-#include "tags.h"
 #include "parser.h"
+#include "tags.h"
+#include "util.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-int __attribute__((visibility("default"))) mdview_init(struct mdview_ctx *ctx) {
+int mdview_init(struct mdview_ctx *ctx) {
   ctx->error_msg = NULL;
 
   // setup the HTML buffer
@@ -41,8 +41,7 @@ int __attribute__((visibility("default"))) mdview_init(struct mdview_ctx *ctx) {
   return 0;
 }
 
-char *__attribute__((visibility("default")))
-mdview_feed(struct mdview_ctx *ctx, const char *md) {
+char *mdview_feed(struct mdview_ctx *ctx, const char *md) {
   // reset the HTML buffer from the last feed, if this is not the first feed
   if (ctx->feeds > 0) {
     bufclear(&ctx->html_out);
@@ -60,8 +59,7 @@ mdview_feed(struct mdview_ctx *ctx, const char *md) {
   return ctx->html_out.buf;
 }
 
-char *__attribute__((visibility("default")))
-mdview_flush(struct mdview_ctx *ctx) {
+char *mdview_flush(struct mdview_ctx *ctx) {
   if (ctx->feeds > 0) {
     bufclear(&ctx->html_out);
     ctx->error_msg = NULL;
@@ -86,8 +84,7 @@ mdview_flush(struct mdview_ctx *ctx) {
   return ctx->html_out.buf;
 }
 
-void __attribute__((visibility("default")))
-mdview_free(struct mdview_ctx *ctx) {
+void mdview_free(struct mdview_ctx *ctx) {
   ctx->error_msg = NULL;
 
   // free the HTML buffer

@@ -49,7 +49,7 @@ struct mdview_ctx {
  * @param ctx The context to initialize.
  * @return 0 on failure, 1 on success.
  */
-int mdview_init(struct mdview_ctx *ctx);
+__attribute__((visibility("default"))) int mdview_init(struct mdview_ctx *ctx);
 
 /**
  * Feed some markdown to the parser, update the context, and return any HTML
@@ -60,7 +60,7 @@ int mdview_init(struct mdview_ctx *ctx);
  *         if an error occured (error is in ctx->error_msg; error is NULL if a
  *         memory-related error occured).
  */
-char *mdview_feed(struct mdview_ctx *ctx, const char *md);
+__attribute__((visibility("default"))) char *mdview_feed(struct mdview_ctx *ctx, const char *md);
 
 /**
  * Return any pending HTML that has been generated but unfinished. You likely
@@ -73,7 +73,7 @@ char *mdview_feed(struct mdview_ctx *ctx, const char *md);
  *         if an error occured (error is in ctx->error_msg; error is NULL if a
  *         memory-related error occured).
  */
-char *mdview_flush(struct mdview_ctx *ctx);
+__attribute__((visibility("default"))) char *mdview_flush(struct mdview_ctx *ctx);
 
 /**
  * Free any resources associated with the context. Note: this does not free the

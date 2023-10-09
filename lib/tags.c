@@ -152,7 +152,7 @@ int block_header(struct mdview_ctx *ctx, int level) {
  */
 
 int unordered_list_item(struct mdview_ctx *ctx, char starter) {
-  if (ctx->block_type != 7 || (ctx->block_subtype & 0xFF) != starter) {
+  if (ctx->block_type != 7 || (char)ctx->block_subtype != starter) {
     // if we're not in an unordered list or the starter is different, start a
     // new unordered one
     if (!block_unordered_list(ctx, starter))

@@ -24,7 +24,7 @@ libmdview.a: $(OBJS)
 	$(AR) rcs libmdview.a $(OBJS)
 
 mdv: libmdview.a mdv.c
-	$(CC) $(CFLAGS) -L. -lmdview -o mdv mdv.c
+	$(CC) $(CFLAGS) -L. -o mdv mdv.c -lmdview
 
 .PHONY: clean
 clean:
