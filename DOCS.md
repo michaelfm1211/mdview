@@ -39,7 +39,7 @@ decorations and the HTML tags they transpile to:
 - Bold: `<b></b>`. Example: **important**
 - Strike: `<s></s>`. Example: Today is ~~yesterday~~ today.
 - Subscript: `<sub></sub>`. Example: H~2~O
-- Superscript: `<sup></sup>`. Example: 2^10^=1024
+- Superscript: `<sup></sup>`. Example: 2^10^ = 1024
 - Inline code: `<code></code>`. Example: `printf("Hello, world!\n");`
 
 and below is the list of special character sequences that toggle these
@@ -48,9 +48,9 @@ decorations. The longest sequence is always matched:
 - `*`: Toggle italics. Example: `*The New York Times*`
 - `**`: Toggle bold. Example: `**important**`
 - `***`: Toggle italics and bold. 
-- `^`: Toggle superscript. Example: `H~2~O`
-- `~`: Toggle subscript. Example: `2^10^=1024`
-- `~~`: Toggle strike. Exript. Example: `2^10^=1024`
+- `~~`: Toggle strike. Example: `Today is ~~yesterday~~ today.`
+- `^`: Toggle subscript. Example: `H~2~O`
+- `~`: Toggle superscript. Example: `2^10^=1024`
 - \`: Toggle inline code: Example: \` `printf("Hello, world!\n");` \`
 
 Note again that decorations are always **toggled**, not set. This can become
