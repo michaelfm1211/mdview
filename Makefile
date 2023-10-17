@@ -17,6 +17,10 @@ debug: libmdview.a mdv
 	mv mdv out
 	cp lib/mdview.h out
 
+macos_leaks: clean all
+	leaks --atExit -- out/mdv < DOCS.md > docs.html
+	rm docs.html
+
 %.o: %.c
 	$(CC) $(CFLAGS) -fvisibility=hidden -c -o $@ $<
 
