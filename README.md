@@ -1,8 +1,8 @@
 # mdview
 
-mdview is a small, fast, and safe markdown-to-html compiler. You can access
-mdview through the `mdv` command line interface or through the `libmdview` C
-library. You can read more about them below.
+mdview is a small and fast markdown-to-html compiler. You can access mdview
+through the `mdv` command line interface or through the `libmdview` C library.
+You can read more about them below.
 
 mdview only supports a reasonable subset of markdown. Although it is not
 fully complete and compatible with every other implementation, most people
