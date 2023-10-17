@@ -124,6 +124,18 @@ a space and ends on two consecutive newlines. All text between the start
 sequence and the newline is wrapped in an HTML `<blockquote></blockquote>`
 block. A new paragraph block is begun when this block ends.
 
+One special note about blocks: they are never buffered, ie starting or ending
+a block will always result in a write to `ctx->html_out` regardless of what
+`ctx->curr_buf` is. For developers, this means that you shouldn't try to buffer
+or predict stuff between multiple blocks. For users, this means that you can't
+have Markdown links with stuff like headers or lists inside of them. libmdview
+won't stop you, but you'll get really malformed HTML. This shouldn't be a
+problem for anyone because no major Markdown compiler supports blocks within
+links, but if you really need it then you can always wrap it in a raw HTML `<a>`
+tag. Decorations still work fine though. Add as many text decorations in your
+link text as your heart desires (however, it's probably better to keep it out
+of image alt-text).
+
 ### Special Cases
 
 While almost everything is built around blocks and decorations, not everything
@@ -153,7 +165,9 @@ in markdown, the URL comes after the text. This inherently requires libmdview to
 look ahead, but libmdview is restricted to only seeing one character at a time.
 To get around this, the library "cheats" by storing in memory anything that
 could become a link (more specifically, any text between a `[` character and the
-next space or the next `]` character).
+next space or the next `]` character). One potentially notable result of this
+"cheating" is that you can't change blocks within a link. This is covered more
+under the "Blocks" section above.
 
 ##### Images
 

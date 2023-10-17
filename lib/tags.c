@@ -9,8 +9,10 @@
  */
 
 #define TOGGLE_DECORATION(bit, tag)                                            \
-  if (ctx->block_type == -1)                                                   \
-    block_paragraph(ctx);                                                      \
+  if (ctx->block_type == -1) {                                                 \
+    if (!block_paragraph(ctx))                                                 \
+      return 0;                                                                \
+  }                                                                            \
   if (ctx->text_decoration & (1 << bit)) {                                     \
     if (!bufcat(ctx->curr_buf, "</" tag ">", 3 + sizeof(tag) - 1))             \
       return 0;                                                                \
@@ -74,7 +76,7 @@ int close_block(struct mdview_ctx *ctx) {
     retval = 1;
     break;
   case 0:
-    retval = bufcat(ctx->curr_buf, "</p>", 4);
+    retval = bufcat(&ctx->html_out, "</p>", 4);
     break;
   case 1:
   case 2:
@@ -85,16 +87,16 @@ int close_block(struct mdview_ctx *ctx) {
     retval = close_header_block(ctx);
     break;
   case 7:
-    retval = bufcat(ctx->curr_buf, "</li></ul>", 10);
+    retval = bufcat(&ctx->html_out, "</li></ul>", 10);
     break;
   case 8:
-    retval = bufcat(ctx->curr_buf, "</ol>", 5);
+    retval = bufcat(&ctx->html_out, "</ol>", 5);
     break;
   case 9:
-    retval = bufcat(ctx->curr_buf, "</code></pre>", 13);
+    retval = bufcat(&ctx->html_out, "</code></pre>", 13);
     break;
   case 10:
-    retval = bufcat(ctx->curr_buf, "</blockquote>", 13);
+    retval = bufcat(&ctx->html_out, "</blockquote>", 13);
     break;
   default:
     fprintf(stderr, "Failed to close nonexistant block type %d\n",
@@ -108,12 +110,14 @@ int close_block(struct mdview_ctx *ctx) {
   return retval;
 }
 
+// NOTE: blocks always write to ctx->html_out, NOT wherever ctx->curr_buf is
+// pointing. This means that if you can't change blocks while buffering!
 #define BLOCK_TAG(type, subtype, tag)                                          \
   if (!close_block(ctx))                                                       \
     return 1;                                                                  \
   ctx->block_type = type;                                                      \
   ctx->block_subtype = subtype;                                                \
-  return bufcat(ctx->curr_buf, "<" tag ">", 2 + sizeof(tag) - 1);
+  return bufcat(&ctx->html_out, "<" tag ">", 2 + sizeof(tag) - 1);
 
 int block_paragraph(struct mdview_ctx *ctx) { BLOCK_TAG(0, 0, "p") }
 int block_unordered_list(struct mdview_ctx *ctx, char starter) {
@@ -144,7 +148,7 @@ int block_header(struct mdview_ctx *ctx, int level) {
 
   char open_tag[11 + n_len];
   snprintf(open_tag, 11 + n_len, "<h%d id=\"%u\">", level, ctx->id_cnt);
-  return bufcat(ctx->curr_buf, open_tag, 10 + n_len);
+  return bufcat(&ctx->html_out, open_tag, 10 + n_len);
 }
 
 /*
@@ -169,8 +173,10 @@ int unordered_list_item(struct mdview_ctx *ctx, char starter) {
 }
 
 int write_link(struct mdview_ctx *ctx, char *url, char *text) {
-  if (ctx->block_type == -1)
-    block_paragraph(ctx);
+  if (ctx->block_type == -1) {
+    if (!block_paragraph(ctx))
+      return 0;
+  }
 
   if (ctx->image_link) {
     return bufcat(ctx->curr_buf, "<img src=\"", 10) &&
