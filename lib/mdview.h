@@ -37,10 +37,13 @@ struct mdview_ctx {
                               // bits are the number of idents. In code blocks,
                               // this is the number of backticks used.
   int escaped;                // 0 = no, 1 = yes
-  int pending_link;           // 0 = no, 1 = text part, 2 = URL part
   unsigned int text_decoration; // bit field: 1 = italics, 2 = bold, 4 = strike,
                                 // 8 = subscript, 16 = inline code,
                                 // 32 = superscript
+
+  // Link state
+  int pending_link; // 0 = no, 1 = text part, 2 = URL part
+  int image_link;   // 0 = regular link, 1 = image link
 };
 
 /**
@@ -60,7 +63,8 @@ __attribute__((visibility("default"))) int mdview_init(struct mdview_ctx *ctx);
  *         if an error occured (error is in ctx->error_msg; error is NULL if a
  *         memory-related error occured).
  */
-__attribute__((visibility("default"))) char *mdview_feed(struct mdview_ctx *ctx, const char *md);
+__attribute__((visibility("default"))) char *mdview_feed(struct mdview_ctx *ctx,
+                                                         const char *md);
 
 /**
  * Return any pending HTML that has been generated but unfinished. You likely
@@ -73,7 +77,8 @@ __attribute__((visibility("default"))) char *mdview_feed(struct mdview_ctx *ctx,
  *         if an error occured (error is in ctx->error_msg; error is NULL if a
  *         memory-related error occured).
  */
-__attribute__((visibility("default"))) char *mdview_flush(struct mdview_ctx *ctx);
+__attribute__((visibility("default"))) char *
+mdview_flush(struct mdview_ctx *ctx);
 
 /**
  * Free any resources associated with the context. Note: this does not free the

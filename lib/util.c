@@ -49,6 +49,8 @@ int bufcat(struct mdview_buf *buf, char *str, size_t str_len) {
 }
 
 void bufclear(struct mdview_buf *buf) {
+  if (!buf->buf)
+    return;
   buf->len = 0;
   buf->buf[0] = '\0';
 }

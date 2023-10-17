@@ -169,6 +169,16 @@ int unordered_list_item(struct mdview_ctx *ctx, char starter) {
 }
 
 int write_link(struct mdview_ctx *ctx, char *url, char *text) {
+  if (ctx->block_type == -1)
+    block_paragraph(ctx);
+
+  if (ctx->image_link) {
+    return bufcat(ctx->curr_buf, "<img src=\"", 10) &&
+           bufcat(ctx->curr_buf, url, strlen(url)) &&
+           bufcat(ctx->curr_buf, "\" alt=\"", 7) &&
+           bufcat(ctx->curr_buf, text, strlen(text)) &&
+           bufcat(ctx->curr_buf, "\" />", 4);
+  }
   return bufcat(ctx->curr_buf, "<a href=\"", 9) &&
          bufcat(ctx->curr_buf, url, strlen(url)) &&
          bufcat(ctx->curr_buf, "\">", 2) &&

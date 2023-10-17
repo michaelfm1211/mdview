@@ -35,17 +35,24 @@ When the parser detects a sequence of special characters, it will toggle any
 decorations associated with that sequence. Decorations cannot be specially be
 turned on or off, they must be independently toggled. Below is a list of
 decorations and the HTML tags they transpile to:
-- Italics: `<i></i>`
-- Bold: `<b></b>`
-- Strike: `<s></s>`
-- Subscript: `<sub></sub>`
-- Superscript: `<sup></sup>`
-- Inline code: `<code></code>`
+- Italics: `<i></i>`. Example: *The New York Times*
+- Bold: `<b></b>`. Example: **important**
+- Strike: `<s></s>`. Example: Today is ~~yesterday~~ today.
+- Subscript: `<sub></sub>`. Example: H~2~O
+- Superscript: `<sup></sup>`. Example: 2^10^=1024
+- Inline code: `<code></code>`. Example: `printf("Hello, world!\n");`
+
 and below is the list of special character sequences that toggle these
 decorations. The longest sequence is always matched:
-- `*`: toggle italics
-- `**`: toggle bold
-- `***`: toggle italics and bold
+
+- `*`: Toggle italics. Example: `*The New York Times*`
+- `**`: Toggle bold. Example: `**important**`
+- `***`: Toggle italics and bold. 
+- `^`: Toggle superscript. Example: `H~2~O`
+- `~`: Toggle subscript. Example: `2^10^=1024`
+- `~~`: Toggle strike. Exript. Example: `2^10^=1024`
+- \`: Toggle inline code: Example: \` `printf("Hello, world!\n");` \`
+
 Note again that decorations are always **toggled**, not set. This can become
 important in situations similar to the following:
 ```
@@ -147,6 +154,21 @@ look ahead, but libmdview is restricted to only seeing one character at a time.
 To get around this, the library "cheats" by storing in memory anything that
 could become a link (more specifically, any text between a `[` character and the
 next space or the next `]` character).
+
+##### Images
+
+In libmdview, images work a lot like links, and much of the code between them is
+shared (within the source code, images are referred to as "image links").
+Prepending a link with an exclamation mark (`!`) will cause libmdview to use a
+`<img>` tag instead of `<a>`, with the link text becoming the alt text and the
+link URL becoming the image source URL. For example:
+```
+![Image of a panda.](//img/panda.png)
+```
+will become
+```
+<img src="//img/panda.png" alt="Image of a panda." />
+```
 
 ##### Tables
 

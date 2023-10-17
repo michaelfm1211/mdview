@@ -1,4 +1,5 @@
 #include "mdview.h"
+#include "links.h"
 #include "parser.h"
 #include "tags.h"
 #include "util.h"
@@ -35,8 +36,11 @@ int mdview_init(struct mdview_ctx *ctx) {
   ctx->block_subtype = 0;
   ctx->indent = 0;
   ctx->escaped = 0;
-  ctx->pending_link = 0;
   ctx->text_decoration = 0;
+
+  // setup link state
+  ctx->pending_link = 0;
+  ctx->image_link = 0;
 
   return 0;
 }
