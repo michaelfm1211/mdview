@@ -15,6 +15,7 @@ int handle_link_special_char(struct mdview_ctx *ctx, char ch) {
       ctx->image_link = 1;
       return 1;
     }
+    break;
   case '[':
     // start link
     if (!ctx->pending_link) {
