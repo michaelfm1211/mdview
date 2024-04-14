@@ -65,8 +65,8 @@ int end_all_decorations(struct mdview_ctx *ctx) {
  */
 
 static inline int close_header_block(struct mdview_ctx *ctx) {
-  char header_tag[5] = {'<', '/', 'h', '0' + ctx->block_type, '>'};
-  return bufcat(ctx->curr_buf, header_tag, 5);
+  char header_tag[6] = {'<', '/', 'h', '0' + ctx->block_type, '>', '\n'};
+  return bufcat(ctx->curr_buf, header_tag, 6);
 }
 
 int close_block(struct mdview_ctx *ctx) {
@@ -76,7 +76,7 @@ int close_block(struct mdview_ctx *ctx) {
     retval = 1;
     break;
   case 0:
-    retval = bufcat(&ctx->html_out, "</p>", 4);
+    retval = bufcat(&ctx->html_out, "\n</p>\n", 6);
     break;
   case 1:
   case 2:
@@ -87,16 +87,16 @@ int close_block(struct mdview_ctx *ctx) {
     retval = close_header_block(ctx);
     break;
   case 7:
-    retval = bufcat(&ctx->html_out, "</li></ul>", 10);
+    retval = bufcat(&ctx->html_out, "</li>\n</ul>\n", 12);
     break;
   case 8:
-    retval = bufcat(&ctx->html_out, "</ol>", 5);
+    retval = bufcat(&ctx->html_out, "\n</ol>\n", 7);
     break;
   case 9:
-    retval = bufcat(&ctx->html_out, "</code></pre>", 13);
+    retval = bufcat(&ctx->html_out, "</code></pre>\n", 14);
     break;
   case 10:
-    retval = bufcat(&ctx->html_out, "</blockquote>", 13);
+    retval = bufcat(&ctx->html_out, "\n</blockquote>\n", 15);
     break;
   default:
     fprintf(stderr, "Failed to close nonexistant block type %d\n",
@@ -117,7 +117,7 @@ int close_block(struct mdview_ctx *ctx) {
     return 1;                                                                  \
   ctx->block_type = type;                                                      \
   ctx->block_subtype = subtype;                                                \
-  return bufcat(&ctx->html_out, "<" tag ">", 2 + sizeof(tag) - 1);
+  return bufcat(&ctx->html_out, "<" tag ">\n", 3 + sizeof(tag) - 1);
 
 int block_paragraph(struct mdview_ctx *ctx) { BLOCK_TAG(0, 0, "p") }
 int block_unordered_list(struct mdview_ctx *ctx, char starter) {
@@ -163,7 +163,7 @@ int unordered_list_item(struct mdview_ctx *ctx, char starter) {
       return 0;
   } else {
     // otherwise we need to close the last list item
-    if (!bufcat(ctx->curr_buf, "</li>", 5))
+    if (!bufcat(ctx->curr_buf, "</li>\n", 6))
       return 0;
   }
 
